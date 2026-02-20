@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet } from 'react-router-dom';
 
 export default function ProtectedRoute() {
   // TODO: Conectar con Contexto de Autenticación real o Store de Zustand
