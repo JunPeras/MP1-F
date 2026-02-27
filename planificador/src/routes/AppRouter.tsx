@@ -6,10 +6,10 @@ import PublicRoute from './PublicRoute';
 // Páginas
 import {
   LoginPage,
-  HoyPage,
-  CrearActividadPage,
-  DetalleActividadPage,
-  ProgresoPage,
+  TodayPage,
+  CreateActivityPage,
+  DetailActivityPage,
+  ProgressPage,
 } from '../pages';
 
 export default function AppRouter() {
@@ -24,10 +24,10 @@ export default function AppRouter() {
         {/* Rutas protegidas */}
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            <Route path="/hoy" element={<HoyPage />} />
-            <Route path="/crear" element={<CrearActividadPage />} />
-            <Route path="/actividad/:id" element={<DetalleActividadPage />} />
-            <Route path="/progreso" element={<ProgresoPage />} />
+            <Route path="/hoy" element={<TodayPage />} />
+            <Route path="/crear" element={<CreateActivityPage />} />
+            <Route path="/actividad/:id" element={<DetailActivityPage />} />
+            <Route path="/progreso" element={<ProgressPage />} />
 
             {/* Ruta por defecto para usuarios autenticados */}
             <Route path="/" element={<Navigate to="/hoy" replace />} />
