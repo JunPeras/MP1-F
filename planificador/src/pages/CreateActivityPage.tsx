@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, Save, ListTodo } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -11,7 +11,9 @@ import {
 } from '../schemas/activity.schema';
 import { ACTIVITY_TYPES, ACTIVITY_TYPE_LABEL } from '../constants';
 import { createActivity } from '../services/activity.service';
+import { createSubtask } from '../services/subtask.service';
 import { Modal } from '../components/ui/Modal';
+import { SubtaskFormList } from '../components/ui/SubtaskFormList';
 
 export default function CrearActividadPage() {
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ export default function CrearActividadPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<CreateActivityForm>({
     resolver: zodResolver(createActivitySchema),
@@ -29,13 +32,36 @@ export default function CrearActividadPage() {
       course: '',
       due_date: '',
       event_date: '',
+      subtasks: [],
     },
   });
 
   const onSubmit = async (data: CreateActivityForm) => {
     try {
-      const activity = await createActivity(data);
-      toast.success('¡Actividad creada exitosamente!. Ahora puedes agregar subtareas y organizar tu tiempo.');
+      const { subtasks, ...activityData } = data;
+      const activity = await createActivity(activityData as CreateActivityForm);
+
+      // Crear subtareas en paralelo si las hay
+      if (subtasks && subtasks.length > 0) {
+        const results = await Promise.allSettled(
+          subtasks.map((s) =>
+            createSubtask({ ...s, activity: activity.id }),
+          ),
+        );
+
+        const failed = results.filter((r) => r.status === 'rejected').length;
+
+        if (failed > 0) {
+          toast.warning(
+            `La actividad se creó, pero ${failed} subtarea(s) no se pudieron guardar. Puedes agregarlas desde el detalle.`,
+          );
+        } else {
+          toast.success('¡Actividad y subtareas creadas exitosamente!');
+        }
+      } else {
+        toast.success('¡Actividad creada exitosamente! Puedes agregar subtareas desde el detalle.');
+      }
+
       navigate(`/actividad/${activity.id}`);
     } catch {
       toast.error('No se pudo crear la actividad. Verifica los campos obligatorios e inténtalo nuevamente.');
@@ -139,72 +165,66 @@ export default function CrearActividadPage() {
           </section>
 
           {/* ── Sección 2: Programación y Entrega ── */}
-            <section className="space-y-4">
+          <section className="space-y-4">
             <header className="border-b border-gray-100 pb-2">
               <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
-              Programación y Entrega
+                Programación y Entrega
               </h2>
               <p className="text-xs text-gray-500">
-              Establece los plazos y fechas importantes.
+                Establece los plazos y fechas importantes.
               </p>
             </header>
 
             <div className="grid gap-6 pt-2 sm:grid-cols-2">
-              {/* Fecha límite */}
-              <div>
-              <label
-                htmlFor="fecha_limite"
-                className="mb-1 block text-sm font-medium text-gray-700"
-              >
-                Fecha límite <span className="text-red-500">*</span>
-              </label>
-              <p className="mb-2 text-xs text-gray-600">
-                Último día para entregar la actividad
-              </p>
-              <input
-                id="fecha_limite"
-                type="date"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                {...register('due_date')}
-              />
-              {errors.due_date && (
-                <p className="mt-1 text-sm text-red-600">
-                {errors.due_date.message}
-                </p>
-              )}
-              </div>
 
               {/* Fecha/hora del evento */}
               <div>
-              <label
-                htmlFor="fecha_evento"
-                className="mb-1 block text-sm font-medium text-gray-700"
-              >
-                Fecha y hora del evento
-              </label>
-              <p className="mb-2 text-xs text-gray-600">
-                Momento en que ocurre la actividad
-              </p>
-              <input
-                id="fecha_evento"
-                type="datetime-local"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                {...register('event_date')}
-              />
+                <label
+                  htmlFor="fecha_evento"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Fecha y hora del evento
+                </label>
+                <p className="mb-2 text-xs text-gray-600">
+                  Momento en que ocurre la actividad
+                </p>
+                <input
+                  id="fecha_evento"
+                  type="datetime-local"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  {...register('event_date')}
+                />
+              </div>
+              
+              {/* Fecha límite */}
+              <div>
+                <label
+                  htmlFor="fecha_limite"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Fecha límite <span className="text-red-500">*</span>
+                </label>
+                <p className="mb-2 text-xs text-gray-600">
+                  Último momento para entregar la actividad
+                </p>
+                <input
+                  id="fecha_limite"
+                  type="datetime-local"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  {...register('due_date')}
+                />
+                {errors.due_date && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.due_date.message}
+                  </p>
+                )}
               </div>
             </div>
-            </section>
 
-          {/* ── Subtareas (placeholder) ── */}
-          <section className="space-y-2 pt-4">
-            {/* TODO: Reemplazar con formulario dinámico de subtareas (US siguiente) */}
-            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4">
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <ListTodo className="h-4 w-4" />
-                <span>Las subtareas se podrán agregar próximamente.</span>
-              </div>
-            </div>
           </section>
+
+          {/* ── Sección 3: Plan de Trabajo (Subtareas) ── */}
+          <SubtaskFormList control={control} errors={errors} />
 
           {/* ── Botones ── */}
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
