@@ -1,6 +1,8 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { logout } from '../../services/auth.service';
+import { useEffect, useState } from 'react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -14,11 +16,25 @@ const navItems = [
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('username');
+    setUsername(storedUser);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        {/* Logo / Brand */}
+
+        {/* Logo */}
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
             P
@@ -28,10 +44,11 @@ export default function Navbar() {
           </span>
         </div>
 
-        {/* Links de Navegación */}
+        {/* Navegación */}
         <div className="flex items-center gap-1 sm:gap-6">
           {navItems.map((item) => {
             const isActive = location.pathname.startsWith(item.path);
+
             return (
               <Link
                 key={item.path}
@@ -49,12 +66,23 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* Perfil / Acciones */}
+        {/* Perfil */}
         <div className="flex items-center gap-4">
+
+          <button
+            onClick={handleLogout}
+            className="text-sm font-medium text-red-600 hover:text-red-700"
+          >
+            Cerrar sesión
+          </button>
+
           <div className="hidden sm:block text-xs text-gray-500 text-right">
-            <p className="font-medium text-gray-900">Usuario Demo</p>
+            <p className="font-medium text-gray-900">
+              {username || 'Usuario'}
+            </p>
             <p>Estudiante</p>
           </div>
+
           <div className="h-8 w-8 rounded-full bg-gray-200 border border-gray-300 overflow-hidden">
             <img
               src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
@@ -62,6 +90,7 @@ export default function Navbar() {
               className="h-full w-full object-cover"
             />
           </div>
+
         </div>
       </div>
     </nav>

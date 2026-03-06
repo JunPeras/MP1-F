@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { getTodayTasks } from "../services/today.service";
+import { useQuery } from '@tanstack/react-query';
+import { getTodayTasks } from '../services/today.service';
 
 export const useTodayTasks = () => {
   return useQuery({
-    queryKey: ["todayTasks"],
+    queryKey: ['todayTasks'],
     queryFn: getTodayTasks,
   });
 };

@@ -9,14 +9,15 @@ interface LoginResponse {
 }
 
 export async function login(username: string, password: string) {
-  const response = await api.post<LoginResponse>("/auth/login/", {
+  const response = await api.post('/auth/login/', {
     username,
     password,
   });
 
   const accessToken = response.data.tokens.access;
 
-  localStorage.setItem("access_token", accessToken);
+  localStorage.setItem('access_token', accessToken);
+  localStorage.setItem('username', username);
 
   return accessToken;
 }
@@ -32,4 +33,8 @@ export async function register(userData: {
 }) {
   const response = await api.post("/auth/register/", userData);
   return response.data;
+}
+
+export function logout() {
+  localStorage.removeItem('access_token');
 }

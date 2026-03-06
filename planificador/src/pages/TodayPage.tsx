@@ -1,24 +1,69 @@
 import { useTodayTasks } from "../hooks/useTodayTasks";
+import { Link } from "react-router-dom";
 
 export default function HoyPage() {
 
   const { data, isLoading, isError } = useTodayTasks();
 
   if (isLoading) {
-    return <p>Cargando tareas...</p>;
-  }
+  return (
+    <div className="flex justify-center py-20 text-gray-500">
+      Cargando tareas...
+    </div>
+  );
+}
 
   if (isError) {
-    return <p>Error cargando las tareas.</p>;
-  }
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+
+      <h2 className="text-lg font-semibold text-red-600">
+        Error al cargar las tareas
+      </h2>
+
+      <p className="text-gray-500 mt-2 mb-4">
+        Intenta recargar la página.
+      </p>
+
+      <button
+        onClick={() => window.location.reload()}
+        className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+      >
+        Reintentar
+      </button>
+
+    </div>
+  );
+}
 
   if (!data || !data.groups) {
     return <p>No hay datos disponibles.</p>;
   }
 
   if (data.total_count === 0) {
-    return <p>No tienes tareas aún.</p>;
-  }
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+
+      <div className="text-4xl mb-4">📋</div>
+
+      <h2 className="text-xl font-semibold text-gray-800">
+        Aún no tienes tareas
+      </h2>
+
+      <p className="text-gray-500 mt-2 mb-6">
+        Empieza creando tu primera actividad
+      </p>
+
+      <Link
+        to="/crear"
+        className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+      >
+        Crear actividad
+      </Link>
+
+    </div>
+  );
+}
 
   const overdue = data.groups.overdue.tasks;
   const today = data.groups.today.tasks;
@@ -26,17 +71,16 @@ export default function HoyPage() {
 
   return (
     <div className="space-y-8">
-
-      <header>
+      
+      <header className="space-y-2">
         <h1 className="text-3xl font-bold text-gray-900">
           Tu día: Hoy
-        </h1>
-
-        <p className="text-sm text-gray-600">
-          {data.summary}
-        </p>
-      </header>
-
+      </h1>
+      <p className="text-sm text-gray-600">
+        {data.summary}
+      </p>
+      
+    </header> 
       {/* VENCIDAS */}
       <section>
         <h2 className="text-lg font-semibold text-red-600">
