@@ -6,6 +6,7 @@ import PublicRoute from './PublicRoute';
 // Páginas
 import {
   LoginPage,
+  RegisterPage,
   TodayPage,
   CreateActivityPage,
   DetailActivityPage,
@@ -16,9 +17,11 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
         {/* Rutas públicas (Solo accesibles si NO estás autenticado) */}
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Route>
 
         {/* Rutas protegidas */}
