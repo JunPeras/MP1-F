@@ -1,13 +1,5 @@
 import { api } from "../lib/axios";
 
-interface LoginResponse {
-  user: any;
-  tokens: {
-    access: string;
-    refresh: string;
-  };
-}
-
 export async function login(username: string, password: string) {
   const response = await api.post('/auth/login/', {
     username,
