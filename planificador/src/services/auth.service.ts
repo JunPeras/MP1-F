@@ -7,9 +7,14 @@ export async function login(username: string, password: string) {
   });
 
   const accessToken = response.data.tokens.access;
+  const userData = response.data.user;
 
   localStorage.setItem('access_token', accessToken);
   localStorage.setItem('username', username);
+
+  if (userData) {
+    localStorage.setItem('user', JSON.stringify(userData));
+  }
 
   return accessToken;
 }
