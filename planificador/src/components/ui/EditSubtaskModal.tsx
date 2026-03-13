@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Save } from 'lucide-react';
+import { AlertTriangle, Loader2, Save } from 'lucide-react';
 
 import { Modal } from './Modal';
 import { useUpdateSubtask } from '../../hooks/useSubtaskMutations';
+
 import {
   updateSubtaskSchema,
   type UpdateSubtaskForm,
@@ -16,6 +17,7 @@ interface EditSubtaskModalProps {
   readonly onClose: () => void;
   readonly subtask: Subtask | null;
   readonly activityId: number;
+  readonly allSubtasks: Subtask[];
 }
 
 /**
@@ -27,6 +29,7 @@ export function EditSubtaskModal({
   onClose,
   subtask,
   activityId,
+  allSubtasks,
 }: EditSubtaskModalProps) {
   const updateMutation = useUpdateSubtask(activityId);
 
@@ -34,12 +37,26 @@ export function EditSubtaskModal({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isDirty },
   } = useForm<UpdateSubtaskForm>({
     resolver: zodResolver(updateSubtaskSchema),
     defaultValues: subtask ? formDefaults(subtask) : undefined,
   });
 
+  const currentFormDate = useWatch({ control, name: 'target_date' });
+  const currentFormHours = useWatch({ control, name: 'estimated_hours' });
+
+  const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+  const limit = user?.daily_hour_limit ?? 6; // Usamos el límite de la BD, si no existe, 6 por defecto
+
+  const hoursOtherTasks = allSubtasks
+    .filter(st => st.id !== subtask?.id && st.target_date === currentFormDate)
+    .reduce((acc, st) => acc + Number(st.estimated_hours), 0);
+
+  const totalHours = hoursOtherTasks + (Number(currentFormHours) || 0);
+  const hasExceeded = totalHours > limit;
+  
   // Resetear el formulario cuando cambia la subtarea o se abre el modal
   useEffect(() => {
     if (isOpen && subtask) {
@@ -73,7 +90,7 @@ export function EditSubtaskModal({
           <button
             type="submit"
             form="edit-subtask-form"
-            disabled={updateMutation.isPending || !isDirty}
+            disabled={updateMutation.isPending || !isDirty || hasExceeded}
             className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {updateMutation.isPending ? (
@@ -154,6 +171,22 @@ export function EditSubtaskModal({
             )}
           </div>
         </div>
+
+        {hasExceeded && (
+          <div className="mt-4 flex gap-3 rounded-md bg-red-50 p-3 border border-red-100">
+            <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-red-800">
+              <p className="font-bold uppercase mb-1">
+                Límite de horas excedido
+              </p>
+              <p>
+                Has superado el límite de <strong>{limit} horas</strong> disponibles. 
+                Por favor, ajusta los tiempos para no sobrecargarte
+              </p>
+            </div>
+          </div>
+        )}
+
       </form>
     </Modal>
   );

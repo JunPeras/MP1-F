@@ -1,8 +1,8 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, Save } from 'lucide-react';
+import { AlertTriangle, Loader2, Save } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -35,6 +35,22 @@ export default function CrearActividadPage() {
       subtasks: [],
     },
   });
+
+  const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+  const limit = user?.daily_hour_limit ?? 6;
+
+  const watchedSubtasks = useWatch({ control, name: 'subtasks' }) || [];
+
+  const totalsByDate: Record<string, number> = {};
+
+  watchedSubtasks.forEach((st: any) => {
+    if (st.target_date && st.estimated_hours) {
+      const hours = Number(st.estimated_hours) || 0;
+      totalsByDate[st.target_date] = (totalsByDate[st.target_date] || 0) + hours;
+    }
+  });
+
+  const hasExceeded = Object.values(totalsByDate).some(total => total > limit);
 
   const onSubmit = async (data: CreateActivityForm) => {
     try {
@@ -226,6 +242,27 @@ export default function CrearActividadPage() {
           {/* ── Sección 3: Plan de Trabajo (Subtareas) ── */}
           <SubtaskFormList control={control} errors={errors} />
 
+          {hasExceeded && (
+            <div className="mt-4 rounded-md bg-red-50 p-4 border border-red-200 animate-in slide-in-from-top-2 duration-300">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-bold text-red-800">
+                    Límite de horas excedido
+                  </h3>
+                  <div className="mt-1 text-sm text-red-700">
+                    <p>
+                      Has superado el límite de <strong>{limit} horas</strong> disponibles. 
+                      Por favor, ajusta los tiempos para no sobrecargarte
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── Botones ── */}
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
             <button
@@ -235,15 +272,16 @@ export default function CrearActividadPage() {
             >
               Cancelar
             </button>
+            
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isSubmitting || hasExceeded}
+              className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Guardando…
+                  Guardando...
                 </>
               ) : (
                 <>
@@ -252,6 +290,7 @@ export default function CrearActividadPage() {
                 </>
               )}
             </button>
+
           </div>
         </div>
       </form>

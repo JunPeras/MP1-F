@@ -37,10 +37,10 @@ export default function Navbar() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
-            P
+            S
           </div>
           <span className="font-semibold text-gray-900 hidden sm:block">
-            Planificador
+            SlowTrack
           </span>
         </div>
 
