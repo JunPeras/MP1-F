@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AlertTriangle, Loader2, Save } from 'lucide-react';
 import { useState } from 'react';
+import axios from 'axios';
 
 import {
   createActivitySchema,
@@ -11,13 +12,16 @@ import {
 } from '../schemas/activity.schema';
 import { ACTIVITY_TYPES, ACTIVITY_TYPE_LABEL } from '../constants';
 import { createActivity } from '../services/activity.service';
-import { createSubtask } from '../services/subtask.service';
 import { Modal } from '../components/ui/Modal';
 import { SubtaskFormList } from '../components/ui/SubtaskFormList';
+import { useAllSubtasks } from '../hooks/useSubtask';
+import { useDailyLimitValidation } from '../hooks/useDailyLimitValidation';
 
 export default function CrearActividadPage() {
   const navigate = useNavigate();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+
+  const { data: allExistingSubtasks = [] } = useAllSubtasks();
 
   const {
     register,
@@ -41,46 +45,79 @@ export default function CrearActividadPage() {
 
   const watchedSubtasks = useWatch({ control, name: 'subtasks' }) || [];
 
-  const totalsByDate: Record<string, number> = {};
+  const datesInForm = [...new Set(watchedSubtasks.map((st: any) => st.target_date).filter(Boolean))];
 
-  watchedSubtasks.forEach((st: any) => {
-    if (st.target_date && st.estimated_hours) {
-      const hours = Number(st.estimated_hours) || 0;
-      totalsByDate[st.target_date] = (totalsByDate[st.target_date] || 0) + hours;
-    }
-  });
+  // Agrupar conflictos por fecha usando una lógica similar al hook
+  const conflictDetails = datesInForm
+    .map((date) => {
+      const hoursInForm = watchedSubtasks
+        .filter((st: any) => st.target_date === date)
+        .reduce((sum, st) => sum + (Number(st.estimated_hours) || 0), 0);
 
-  const hasExceeded = Object.values(totalsByDate).some(total => total > limit);
+      const daySubtasksFromDB = allExistingSubtasks.filter(
+        (s: any) => s.target_date === date && !s.completed
+      );
+
+      const hoursInDB = daySubtasksFromDB.reduce(
+        (sum: number, s: any) => sum + Number(s.estimated_hours),
+        0
+      );
+
+      const total = Number((hoursInDB + hoursInForm).toFixed(1));
+
+      if (total > limit) {
+        const otherActivities = daySubtasksFromDB.reduce((acc: any[], s: any) => {
+          const existing = acc.find((a) => a.id === s.activity);
+          if (existing) {
+            existing.hours += Number(s.estimated_hours);
+          } else {
+            acc.push({
+              id: s.activity,
+              title: s.activity_title || 'Otra actividad',
+              hours: Number(s.estimated_hours),
+            });
+          }
+          return acc;
+        }, []);
+
+        return { date, total, hoursInForm, otherActivities };
+      }
+      return null;
+    })
+    .filter(Boolean);
+
+  const hasExceeded = conflictDetails.length > 0;
 
   const onSubmit = async (data: CreateActivityForm) => {
     try {
-      const { subtasks, ...activityData } = data;
-      const activity = await createActivity(activityData as CreateActivityForm);
+      const activity = await createActivity(data);
 
-      // Crear subtareas en paralelo si las hay
-      if (subtasks && subtasks.length > 0) {
-        const results = await Promise.allSettled(
-          subtasks.map((s) =>
-            createSubtask({ ...s, activity: activity.id }),
-          ),
-        );
-
-        const failed = results.filter((r) => r.status === 'rejected').length;
-
-        if (failed > 0) {
-          toast.warning(
-            `La actividad se creó, pero ${failed} subtarea(s) no se pudieron guardar. Puedes agregarlas desde el detalle.`,
-          );
-        } else {
-          toast.success('¡Actividad y subtareas creadas exitosamente!');
-        }
+      if (data.subtasks && data.subtasks.length > 0) {
+        toast.success('¡Actividad y subtareas creadas exitosamente!');
       } else {
         toast.success('¡Actividad creada exitosamente! Puedes agregar subtareas desde el detalle.');
       }
 
       navigate(`/actividad/${activity.id}`);
-    } catch {
-      toast.error('No se pudo crear la actividad. Verifica los campos obligatorios e inténtalo nuevamente.');
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const errorData = error.response.data;
+
+        if (errorData.error_code === 'DAILY_LIMIT_EXCEEDED' && errorData.details?.conflicts) {
+          const conflictDates = [...new Set(
+            errorData.details.conflicts.map((c: { target_date: string }) => c.target_date)
+          )];
+          toast.error(
+            `Límite diario excedido para: ${conflictDates.join(', ')}. Ajusta las horas de las subtareas.`
+          );
+        } else if (errorData.message) {
+          toast.error(errorData.message);
+        } else {
+          toast.error('No se pudo crear la actividad. Verifica los campos e inténtalo nuevamente.');
+        }
+      } else {
+        toast.error('No se pudo crear la actividad. Verifica los campos obligatorios e inténtalo nuevamente.');
+      }
     }
   };
 
@@ -249,13 +286,28 @@ export default function CrearActividadPage() {
                   <AlertTriangle className="h-5 w-5 text-red-500" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-bold text-red-800">
+                  <h3 className="text-sm font-bold text-red-800 uppercase">
                     Límite de horas excedido
                   </h3>
-                  <div className="mt-1 text-sm text-red-700">
-                    <p>
-                      Has superado el límite de <strong>{limit} horas</strong> disponibles. 
-                      Por favor, ajusta los tiempos para no sobrecargarte
+                  <div className="mt-2 text-[11px] leading-relaxed text-red-700">
+                    <p className="mb-2">
+                      Has superado el límite de <strong>{limit} horas</strong> disponibles en los siguientes días:
+                    </p>
+                    <ul className="space-y-3 list-disc pl-3">
+                      {conflictDetails.map((conflict: any) => (
+                        <li key={conflict.date}>
+                          <span className="font-bold">{conflict.date}</span>: <strong>{conflict.total}h</strong> planeadas en total.
+                          <ul className="mt-1 space-y-0.5 ml-2 border-l-2 border-red-100 pl-2">
+                            <li>En esta nueva actividad: <strong>{conflict.hoursInForm}h</strong></li>
+                            {conflict.otherActivities.map((act: any) => (
+                              <li key={act.id}>En "{act.title}": <strong>{act.hours}h</strong></li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 font-medium italic">
+                      Tip: Ajusta las horas o cambia las fechas para no sobrecargarte.
                     </p>
                   </div>
                 </div>

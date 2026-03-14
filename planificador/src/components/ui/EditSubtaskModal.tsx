@@ -5,6 +5,8 @@ import { AlertTriangle, Loader2, Save } from 'lucide-react';
 
 import { Modal } from './Modal';
 import { useUpdateSubtask } from '../../hooks/useSubtaskMutations';
+import { useAllSubtasks } from '../../hooks/useSubtask';
+import { useDailyLimitValidation } from '../../hooks/useDailyLimitValidation';
 
 import {
   updateSubtaskSchema,
@@ -29,9 +31,10 @@ export function EditSubtaskModal({
   onClose,
   subtask,
   activityId,
-  allSubtasks,
 }: EditSubtaskModalProps) {
   const updateMutation = useUpdateSubtask(activityId);
+
+  const { data: allUserSubtasks = [] } = useAllSubtasks();
 
   const {
     register,
@@ -47,15 +50,14 @@ export function EditSubtaskModal({
   const currentFormDate = useWatch({ control, name: 'target_date' });
   const currentFormHours = useWatch({ control, name: 'estimated_hours' });
 
-  const user = JSON.parse(localStorage.getItem('user') ?? '{}');
-  const limit = user?.daily_hour_limit ?? 6; // Usamos el límite de la BD, si no existe, 6 por defecto
-
-  const hoursOtherTasks = allSubtasks
-    .filter(st => st.id !== subtask?.id && st.target_date === currentFormDate)
-    .reduce((acc, st) => acc + Number(st.estimated_hours), 0);
-
-  const totalHours = hoursOtherTasks + (Number(currentFormHours) || 0);
-  const hasExceeded = totalHours > limit;
+  const { hasExceeded, totalHours, limit, conflictingActivities, hoursInCurrentActivity } = 
+    useDailyLimitValidation(
+      allUserSubtasks,
+      currentFormDate,
+      subtask?.id,
+      activityId,
+      Number(currentFormHours) || 0
+    );
   
   // Resetear el formulario cuando cambia la subtarea o se abre el modal
   useEffect(() => {
@@ -72,7 +74,7 @@ export function EditSubtaskModal({
       { onSuccess: () => onClose() },
     );
   };
-
+  
   return (
     <Modal
       isOpen={isOpen}
@@ -173,15 +175,36 @@ export function EditSubtaskModal({
         </div>
 
         {hasExceeded && (
-          <div className="mt-4 flex gap-3 rounded-md bg-red-50 p-3 border border-red-100">
-            <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-            <div className="text-xs text-red-800">
-              <p className="font-bold uppercase mb-1">
-                Límite de horas excedido
+          <div className="mt-4 rounded-md bg-red-50 p-4 border border-red-100 animate-in slide-in-from-top-1">
+            <div className="flex gap-3 mb-2">
+              <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs font-bold uppercase text-red-800">
+                Límite diario superado ({totalHours}h / {limit}h)
               </p>
-              <p>
-                Has superado el límite de <strong>{limit} horas</strong> disponibles. 
-                Por favor, ajusta los tiempos para no sobrecargarte
+            </div>
+            
+            <div className="text-[11px] leading-relaxed ml-8 text-red-800">
+              <p className="mb-2">
+                Ya tienes el día ocupado con otras tareas:
+              </p>
+              <ul className="space-y-1 list-disc pl-3">
+                {/* Horas en OTRAS actividades */}
+                {conflictingActivities.map((act: any) => (
+                  <li key={act.id}>
+                    En "{act.title}": <strong>{act.hours}h</strong>
+                  </li>
+                ))}
+                {/* Horas en ESTA actividad (excluyendo la actual que editamos y solo pendientes) */}
+                {hoursInCurrentActivity > 0 && (
+                  <li>
+                    Otras en esta actividad: <strong>
+                      {hoursInCurrentActivity}h
+                    </strong>
+                  </li>
+                )}
+              </ul>
+              <p className="mt-2 font-medium italic">
+                Tip: Reduce las horas a {(limit - (totalHours - Number(currentFormHours))).toFixed(1)}h para encajar.
               </p>
             </div>
           </div>

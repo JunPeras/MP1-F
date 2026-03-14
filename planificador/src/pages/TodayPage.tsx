@@ -96,134 +96,143 @@ export default function HoyPage() {
   const upcoming = data.groups.coming_up.tasks;
 
   return (
-    <div className="space-y-8">
+    <div className="h-[calc(100vh-120px)] flex flex-col">
       
-      <header className="space-y-2">
+      <header className="mb-6 shrink-0">
         <h1 className="text-3xl font-bold text-gray-900">
           Tu día: Hoy
-      </h1>
-      <p className="text-sm text-gray-600">
-        {data.summary}
-      </p>
-      
-    </header> 
-      {/* VENCIDAS */}
-      <section>
-        <h2 className="text-lg font-semibold text-red-600">
-          Vencidas
-        </h2>
+        </h1>
+        <p className="text-sm text-gray-600">
+          {data.summary}
+        </p>
+      </header>
 
-        <div className="mt-3 space-y-2">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* VENCIDAS */}
+        <section className="flex flex-col min-h-0 bg-gray-50/50 rounded-xl border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-red-600 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+              Vencidas ({overdue.length})
+            </h2>
+          </div>
 
-          {overdue.map((task:any) => { 
-            const activity = activitiesInfo[task.activity];
-              return (
-                <Link
-                  key={task.id}
-                  to={`/actividad/${task.activity}`}
-                  className="block rounded-lg border border-red-200 bg-red-50 p-3 transition hover:bg-red-100 hover:shadow-sm active:scale-[0.98]"
-                >
-                  
-                  <p className="font-medium">
-                    {task.name || "Sin nombre"}
-                  </p>
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+            {overdue.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">No hay tareas vencidas</p>
+            ) : (
+              overdue.map((task: any) => {
+                const activity = activitiesInfo[task.activity];
+                return (
+                  <Link
+                    key={task.id}
+                    to={`/actividad/${task.activity}`}
+                    className="block rounded-lg border border-red-100 bg-white p-3 shadow-sm transition hover:border-red-300 hover:shadow-md active:scale-[0.98]"
+                  >
+                    <p className="font-semibold text-gray-900 leading-tight mb-1">
+                      {task.name || "Sin nombre"}
+                    </p>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-blue-600 truncate">
+                        {activity ? activity.title : "Cargando..."}
+                      </p>
+                      <div className="flex items-center justify-between text-[11px] text-gray-500 font-medium pt-1 border-t border-gray-50">
+                        <span>⏱ {task.estimated_hours}h</span>
+                        <span className="text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                          {task.target_date}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </section>
 
-                  <p className="text-sm text-gray-500">
-                    {activity ? activity.title : "Cargando actividad"}
-                  </p>
+        {/* PARA HOY */}
+        <section className="flex flex-col min-h-0 bg-blue-50/30 rounded-xl border border-blue-100 p-4">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-blue-600 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600" />
+              Para hoy ({today.length})
+            </h2>
+          </div>
 
-                  <p className="text-sm text-gray-500">
-                    ⏱ {task.estimated_hours} horas
-                  </p>
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+            {today.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">Todo listo por hoy</p>
+            ) : (
+              today.map((task: any) => {
+                const activity = activitiesInfo[task.activity];
+                return (
+                  <Link
+                    key={task.id}
+                    to={`/actividad/${task.activity}`}
+                    className="block rounded-lg border border-blue-100 bg-white p-3 shadow-sm transition hover:border-blue-300 hover:shadow-md active:scale-[0.98]"
+                  >
+                    <p className="font-semibold text-gray-900 leading-tight mb-1">
+                      {task.name || "Sin nombre"}
+                    </p>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-blue-600 truncate">
+                        {activity ? activity.title : "Cargando..."}
+                      </p>
+                      <div className="flex items-center justify-between text-[11px] text-gray-500 font-medium pt-1 border-t border-gray-50">
+                        <span>⏱ {task.estimated_hours}h</span>
+                        <span className="text-blue-600">Hoy</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </section>
 
-                  <p className="text-sm text-gray-600 font-medium">
-                    Fecha límite: {task.target_date || "Sin fecha"} 
-                  </p>
-                </Link>
-          );
-        })}
+        {/* PRÓXIMAS */}
+        <section className="flex flex-col min-h-0 bg-gray-50/50 rounded-xl border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-gray-400" />
+              Próximas ({upcoming.length})
+            </h2>
+          </div>
 
-        </div>
-      </section>
-
-      {/* PARA HOY */}
-      <section>
-        <h2 className="text-lg font-semibold text-blue-600">
-          Para hoy
-        </h2>
-
-        <div className="mt-3 space-y-2">
-
-          {today.map((task:any) => { 
-            const activity = activitiesInfo[task.activity];
-              return (
-                <Link
-                  key={task.id}
-                  to={`/actividad/${task.activity}`}
-                  className="block rounded-lg border border-blue-200 bg-blue-50 p-3 transition hover:bg-blue-100 hover:shadow-sm active:scale-[0.98]"
-                >
-                  
-                  <p className="font-medium">
-                    {task.name || "Sin nombre"}
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    {activity ? activity.title : "Cargando actividad"}
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    ⏱ {task.estimated_hours} horas
-                  </p>
-
-                  <p className="text-sm text-gray-600 font-medium">
-                    Fecha límite: {task.target_date || "Sin fecha"} 
-                  </p>
-                </Link>
-          );
-        })}
-
-        </div>
-      </section>
-
-      {/* PRÓXIMAS */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-800">
-          Próximas
-        </h2>
-
-        <div className="mt-3 space-y-2">
-
-          {upcoming.map((task:any) => { 
-            const activity = activitiesInfo[task.activity];
-              return (
-                <Link
-                  key={task.id}
-                  to={`/actividad/${task.activity}`}
-                  className="block rounded-lg border border-gray-200 bg-white p-3 transition hover:bg-gray-50 hover:shadow-sm active:scale-[0.98]"
-                >
-                  
-                  <p className="font-medium">
-                    {task.name || "Sin nombre"}
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    {activity ? activity.title : "Cargando actividad"}
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    ⏱ {task.estimated_hours} horas
-                  </p>
-
-                  <p className="text-sm text-gray-600 font-medium">
-                    Fecha límite: {task.target_date || "Sin fecha"} 
-                  </p>
-                </Link>
-          );
-        })}
-
-        </div>
-      </section>
-
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+            {upcoming.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">No hay tareas próximas</p>
+            ) : (
+              upcoming.map((task: any) => {
+                const activity = activitiesInfo[task.activity];
+                return (
+                  <Link
+                    key={task.id}
+                    to={`/actividad/${task.activity}`}
+                    className="block rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:border-blue-300 hover:shadow-md active:scale-[0.98]"
+                  >
+                    <p className="font-semibold text-gray-900 leading-tight mb-1">
+                      {task.name || "Sin nombre"}
+                    </p>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-blue-600 truncate">
+                        {activity ? activity.title : "Cargando..."}
+                      </p>
+                      <div className="flex items-center justify-between text-[11px] text-gray-500 font-medium pt-1 border-t border-gray-50">
+                        <span>⏱ {task.estimated_hours}h</span>
+                        <span className="text-gray-400 font-bold uppercase tracking-tighter">
+                          {task.target_date}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

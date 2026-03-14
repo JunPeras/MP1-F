@@ -3,12 +3,13 @@ import type { Activity, CreateActivityForm, UpdateActivityForm, ApiResponse } fr
 
 /**
  * Creates a new evaluative activity via POST /activities/.
+ * Supports sending subtasks in the same payload for atomic creation.
  */
 export async function createActivity(
   data: CreateActivityForm,
 ): Promise<Activity> {
 
-  const { title, type, course, due_date, event_date } = data;
+  const { title, type, course, due_date, event_date, subtasks } = data;
   
   const response = await api.post<ApiResponse<Activity>>('/activities/', {
     title,
@@ -16,6 +17,7 @@ export async function createActivity(
     course,
     due_date,
     event_date: event_date || null,
+    ...(subtasks && subtasks.length > 0 ? { subtasks } : {}),
   });
 
   return response.data.data;
