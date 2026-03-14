@@ -14,10 +14,13 @@ import { createActivity } from '../services/activity.service';
 import { createSubtask } from '../services/subtask.service';
 import { Modal } from '../components/ui/Modal';
 import { SubtaskFormList } from '../components/ui/SubtaskFormList';
+import { useAllSubtasks } from '../hooks/useSubtask';
 
 export default function CrearActividadPage() {
   const navigate = useNavigate();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+
+  const { data: allExistingSubtasks = [] } = useAllSubtasks();
 
   const {
     register,
@@ -41,29 +44,39 @@ export default function CrearActividadPage() {
 
   const watchedSubtasks = useWatch({ control, name: 'subtasks' }) || [];
 
-  const totalsByDate: Record<string, number> = {};
+  const datesInForm = watchedSubtasks
+    .map((st: any) => st.target_date)
+    .filter(Boolean);
 
-  watchedSubtasks.forEach((st: any) => {
-    if (st.target_date && st.estimated_hours) {
-      const hours = Number(st.estimated_hours) || 0;
-      totalsByDate[st.target_date] = (totalsByDate[st.target_date] || 0) + hours;
-    }
+  const hasExceeded = datesInForm.some((date) => {
+    const hoursInDB = allExistingSubtasks
+      .filter((s: any) => s.target_date === date)
+      .reduce((sum: number, s: { estimated_hours: any; }) => sum + Number(s.estimated_hours), 0);
+
+    const hoursInForm = watchedSubtasks
+      .filter((st: any) => st.target_date === date)
+      .reduce((sum, st) => sum + (Number(st.estimated_hours) || 0), 0);
+
+    return (hoursInDB + hoursInForm) > limit;
   });
-
-  const hasExceeded = Object.values(totalsByDate).some(total => total > limit);
 
   const onSubmit = async (data: CreateActivityForm) => {
     try {
       const { subtasks, ...activityData } = data;
+
       const activity = await createActivity(activityData as CreateActivityForm);
+      
 
       // Crear subtareas en paralelo si las hay
       if (subtasks && subtasks.length > 0) {
-        const results = await Promise.allSettled(
-          subtasks.map((s) =>
-            createSubtask({ ...s, activity: activity.id }),
-          ),
-        );
+      const results = await Promise.allSettled(
+        subtasks.map((s) => 
+          createSubtask({ 
+            ...s, 
+            activity: activity.id,
+          }),
+      ),
+    );
 
         const failed = results.filter((r) => r.status === 'rejected').length;
 

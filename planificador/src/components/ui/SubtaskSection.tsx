@@ -25,6 +25,7 @@ import {
 } from '../../schemas/subtask.schema';
 import { Modal } from './Modal';
 import { EditSubtaskModal } from './EditSubtaskModal';
+import { useAllSubtasks } from '../../hooks/useSubtask';
 
 interface SubtaskSectionProps {
   readonly activityId: number;
@@ -46,6 +47,7 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
   const [subtaskToDelete, setSubtaskToDelete] = useState<Subtask | null>(null);
   const [subtaskToEdit, setSubtaskToEdit] = useState<Subtask | null>(null);
   
+  const { data: allUserSubtasks = [] } = useAllSubtasks();
   const createSubtaskMutation = useCreateSubtask(activityId);
   const toggleSubtaskMutation = useToggleSubtask(activityId);
   const deleteSubtaskMutation = useDeleteSubtask(activityId);
@@ -60,25 +62,25 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
     resolver: zodResolver(createSubtaskSchema),
     defaultValues: { name: '', target_date: '', estimated_hours: 0 },
   });
-
+  
   const watchedDate = useWatch({ control, name: 'target_date' });
   const watchedHours = useWatch({ control, name: 'estimated_hours' }) || 0;
 
   const user = JSON.parse(localStorage.getItem('user') ?? '{}');
   const limit = user?.daily_hour_limit ?? 6;
 
-  const existingHoursForDate = subtasks
-    .filter((s) => s.target_date === watchedDate)
-    .reduce((sum, s) => sum + Number(s.estimated_hours), 0);
+  const existingHoursForDate = allUserSubtasks
+    .filter((s: Subtask) => s.target_date === watchedDate)
+    .reduce((sum: number, s: Subtask) => sum + Number(s.estimated_hours), 0);
 
   const totalPlannedHours = existingHoursForDate + Number(watchedHours);
   const hasExceeded = totalPlannedHours > limit;
 
   const onAddSubtask = (data: CreateSubtaskForm) => {
-    createSubtaskMutation.mutate(data, {
-      onSuccess: () => reset(),
-    });
-  };
+  createSubtaskMutation.mutate(data, {
+    onSuccess: () => reset(),
+  });
+};
 
   const confirmDelete = () => {
     if (subtaskToDelete) {
@@ -210,8 +212,8 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
         isOpen={subtaskToEdit !== null}
         onClose={() => setSubtaskToEdit(null)}
         subtask={subtaskToEdit}
-        activityId={activityId}
-        allSubtasks={subtasks || []}
+        activityId={activityId} 
+        allSubtasks={[]}      
       />
 
       <form onSubmit={handleSubmit(onAddSubtask)} className="space-y-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm" noValidate>

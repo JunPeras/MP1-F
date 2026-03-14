@@ -5,6 +5,7 @@ import { AlertTriangle, Loader2, Save } from 'lucide-react';
 
 import { Modal } from './Modal';
 import { useUpdateSubtask } from '../../hooks/useSubtaskMutations';
+import { useAllSubtasks } from '../../hooks/useSubtask';
 
 import {
   updateSubtaskSchema,
@@ -29,9 +30,10 @@ export function EditSubtaskModal({
   onClose,
   subtask,
   activityId,
-  allSubtasks,
 }: EditSubtaskModalProps) {
   const updateMutation = useUpdateSubtask(activityId);
+
+  const { data: allUserSubtasks = [] } = useAllSubtasks();
 
   const {
     register,
@@ -50,11 +52,11 @@ export function EditSubtaskModal({
   const user = JSON.parse(localStorage.getItem('user') ?? '{}');
   const limit = user?.daily_hour_limit ?? 6; // Usamos el límite de la BD, si no existe, 6 por defecto
 
-  const hoursOtherTasks = allSubtasks
-    .filter(st => st.id !== subtask?.id && st.target_date === currentFormDate)
-    .reduce((acc, st) => acc + Number(st.estimated_hours), 0);
+  const existingHoursForDate = allUserSubtasks
+    .filter((s: { target_date: string; id: number | undefined; }) => s.target_date === currentFormDate && s.id !== subtask?.id)
+    .reduce((sum: number, s: Subtask) => sum + Number(s.estimated_hours), 0);
 
-  const totalHours = hoursOtherTasks + (Number(currentFormHours) || 0);
+  const totalHours = existingHoursForDate + (Number(currentFormHours) || 0);
   const hasExceeded = totalHours > limit;
   
   // Resetear el formulario cuando cambia la subtarea o se abre el modal
@@ -72,7 +74,7 @@ export function EditSubtaskModal({
       { onSuccess: () => onClose() },
     );
   };
-
+  
   return (
     <Modal
       isOpen={isOpen}
