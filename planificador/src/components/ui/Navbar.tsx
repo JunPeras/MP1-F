@@ -20,9 +20,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState<string | null>(() => {
-    return localStorage.getItem('username');
-  });
+  const username = localStorage.getItem('username');
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
