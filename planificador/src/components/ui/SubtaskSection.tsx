@@ -26,6 +26,7 @@ import {
 import { Modal } from './Modal';
 import { EditSubtaskModal } from './EditSubtaskModal';
 import { useAllSubtasks } from '../../hooks/useSubtask';
+import { useDailyLimitValidation } from '../../hooks/useDailyLimitValidation';
 
 interface SubtaskSectionProps {
   readonly activityId: number;
@@ -66,15 +67,14 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
   const watchedDate = useWatch({ control, name: 'target_date' });
   const watchedHours = useWatch({ control, name: 'estimated_hours' }) || 0;
 
-  const user = JSON.parse(localStorage.getItem('user') ?? '{}');
-  const limit = user?.daily_hour_limit ?? 6;
-
-  const existingHoursForDate = allUserSubtasks
-    .filter((s: Subtask) => s.target_date === watchedDate)
-    .reduce((sum: number, s: Subtask) => sum + Number(s.estimated_hours), 0);
-
-  const totalPlannedHours = existingHoursForDate + Number(watchedHours);
-  const hasExceeded = totalPlannedHours > limit;
+  const { hasExceeded, totalHours: totalPlannedHours, limit, conflictingActivities, hoursInCurrentActivity } = 
+    useDailyLimitValidation(
+      allUserSubtasks,
+      watchedDate,
+      undefined,
+      activityId,
+      Number(watchedHours)
+    );
 
   const onAddSubtask = (data: CreateSubtaskForm) => {
   createSubtaskMutation.mutate(data, {
@@ -270,15 +270,36 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
           </div>
 
           {hasExceeded && (
-            <div className="sm:col-span-12 flex items-center gap-2 rounded-md bg-red-50 p-2.5 text-red-800 border border-red-100 -mt-2 mb-2 animate-in slide-in-from-top-1">
-              <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-              <div className="text-[11px] leading-tight">
-                <p className="font-bold uppercase mb-1">
-                  Límite de horas excedido
+            <div className="sm:col-span-12 rounded-md bg-red-50 p-3 text-red-800 border border-red-100 -mt-2 mb-2 animate-in slide-in-from-top-1">
+              <div className="flex gap-2 mb-1.5">
+                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-xs font-bold uppercase">
+                  Límite de horas excedido ({totalPlannedHours}h / {limit}h)
                 </p>
-                <p>
-                  Has superado el límite de <strong>{limit} horas</strong> disponibles. 
-                  Por favor, ajusta los tiempos para no sobrecargarte
+              </div>
+              
+              <div className="text-[11px] leading-relaxed ml-6">
+                <p className="mb-2">
+                  No puedes planificar <strong>{watchedHours}h</strong> porque ya tienes horas ocupadas ese día:
+                </p>
+                <ul className="space-y-1 list-disc pl-3">
+                {/* Horas en ESTA actividad */}
+                {hoursInCurrentActivity > 0 && (
+                  <li>
+                    En esta actividad: <strong>
+                      {hoursInCurrentActivity}h
+                    </strong>
+                  </li>
+                )}
+                  {/* Horas en OTRAS actividades */}
+                  {conflictingActivities.map((act: any) => (
+                    <li key={act.id}>
+                      En "{act.title}": <strong>{act.hours}h</strong>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-red-600 font-medium italic">
+                  Tip: Reduce las horas o cambia la fecha para poder agregarla.
                 </p>
               </div>
             </div>

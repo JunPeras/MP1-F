@@ -34,4 +34,30 @@ export async function register(userData: {
 
 export function logout() {
   localStorage.removeItem('access_token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('username');
+}
+
+/**
+ * Check if a proposed daily_hour_limit conflicts with already-scheduled subtasks.
+ * Returns the conflict details or null if no conflicts.
+ */
+export async function checkLimitConflicts(dailyHourLimit: number) {
+  const response = await api.get('/auth/profile/check-limit/', {
+    params: { daily_hour_limit: dailyHourLimit },
+  });
+  return response.data;
+}
+
+/**
+ * Update the current user's profile (e.g. daily_hour_limit).
+ * Updates localStorage with the new user data.
+ */
+export async function updateProfile(data: { daily_hour_limit: number }) {
+  const response = await api.patch('/auth/profile/update/', data);
+
+  // Sync localStorage with the updated user data
+  localStorage.setItem('user', JSON.stringify(response.data));
+
+  return response.data;
 }

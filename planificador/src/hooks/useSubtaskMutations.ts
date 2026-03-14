@@ -6,8 +6,7 @@ import {
   updateSubtask,
   deleteSubtask,
 } from '../services/subtask.service';
-import type { CreateSubtaskForm } from '../schemas/subtask.schema';
-import type { UpdateSubtaskForm } from '../schemas/subtask.schema';
+import type { CreateSubtaskForm, UpdateSubtaskForm } from '../schemas/subtask.schema';
 
 /**
  * Hook para crear una subtarea y refrescar la actividad en cache.
