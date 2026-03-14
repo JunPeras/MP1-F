@@ -15,7 +15,6 @@ import { createActivity } from '../services/activity.service';
 import { Modal } from '../components/ui/Modal';
 import { SubtaskFormList } from '../components/ui/SubtaskFormList';
 import { useAllSubtasks } from '../hooks/useSubtask';
-import { useDailyLimitValidation } from '../hooks/useDailyLimitValidation';
 
 export default function CrearActividadPage() {
   const navigate = useNavigate();
