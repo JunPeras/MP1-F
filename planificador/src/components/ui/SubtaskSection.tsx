@@ -31,12 +31,32 @@ import { useDailyLimitValidation } from '../../hooks/useDailyLimitValidation';
 interface SubtaskSectionProps {
   readonly activityId: number;
   readonly subtasks: Subtask[];
+  readonly dueDate?: string;
+}
+
+function getDateInputMax(dateValue?: string): string | undefined {
+  if (!dateValue) return undefined;
+
+  const directMatch = dateValue.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directMatch) return directMatch[1];
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 }
 
 function sortSubtasks(subtasks: Subtask[]): Subtask[] {
   return [...subtasks].sort((a, b) => {
-    if (a.completed === b.completed) return 0;
-    return a.completed ? 1 : -1;
+    const aCompleted = a.status === 'completed';
+    const bCompleted = b.status === 'completed';
+
+    if (aCompleted === bCompleted) return 0;
+    return aCompleted ? 1 : -1;
   });
 }
 
@@ -44,7 +64,7 @@ function sortSubtasks(subtasks: Subtask[]): Subtask[] {
  * Sección de plan de trabajo para la vista detalle de una actividad.
  * Muestra barra de progreso, lista de subtareas y formulario inline para agregar.
  */
-export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
+export function SubtaskSection({ activityId, subtasks, dueDate }: SubtaskSectionProps) {
   const [subtaskToDelete, setSubtaskToDelete] = useState<Subtask | null>(null);
   const [subtaskToEdit, setSubtaskToEdit] = useState<Subtask | null>(null);
   
@@ -66,6 +86,7 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
   
   const watchedDate = useWatch({ control, name: 'target_date' });
   const watchedHours = useWatch({ control, name: 'estimated_hours' }) || 0;
+  const maxSubtaskDate = getDateInputMax(dueDate);
 
   const { hasExceeded, totalHours: totalPlannedHours, limit, conflictingActivities, hoursInCurrentActivity } = 
     useDailyLimitValidation(
@@ -92,7 +113,7 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
 
   const sortedSubtasks = sortSubtasks(subtasks);
   const totalSubtasks = subtasks.length;
-  const completedSubtasks = subtasks.filter((s) => s.completed).length;
+  const completedSubtasks = subtasks.filter((s) => s.status === 'completed').length;
   const progressPercent =
     totalSubtasks > 0
       ? Math.round((completedSubtasks / totalSubtasks) * 100)
@@ -147,7 +168,7 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
               onToggle={() =>
                 toggleSubtaskMutation.mutate({
                   id: subtask.id,
-                  completed: !subtask.completed,
+                  status: subtask.status === 'completed' ? 'pending' : 'completed',
                 })
               }
               onDelete={() => setSubtaskToDelete(subtask)}
@@ -213,6 +234,7 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
         onClose={() => setSubtaskToEdit(null)}
         subtask={subtaskToEdit}
         activityId={activityId} 
+        dueDate={dueDate}
         allSubtasks={[]}      
       />
 
@@ -242,6 +264,7 @@ export function SubtaskSection({ activityId, subtasks }: SubtaskSectionProps) {
             <input
               id="new-subtask-date"
               type="date"
+              max={maxSubtaskDate}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               {...register('target_date')}
             />
@@ -350,11 +373,13 @@ function SubtaskItem({
   isToggling,
   isDeleting,
 }: SubtaskItemProps) {
+  const isCompleted = subtask.status === 'completed';
+
   return (
     <div
       className={cn(
         'flex items-center gap-3 rounded-md border bg-white px-4 py-3 transition-colors',
-        subtask.completed
+        isCompleted
           ? 'border-gray-100 bg-gray-50/80'
           : 'border-gray-200',
       )}
@@ -366,12 +391,12 @@ function SubtaskItem({
         disabled={isToggling}
         className="shrink-0 text-gray-400 hover:text-green-600 transition-colors disabled:opacity-50"
         title={
-          subtask.completed
+          isCompleted
             ? 'Marcar como pendiente'
             : 'Marcar como completada'
         }
       >
-        {subtask.completed ? (
+        {isCompleted ? (
           <CheckCircle2 className="h-5 w-5 text-green-500" />
         ) : (
           <Circle className="h-5 w-5" />
@@ -383,7 +408,7 @@ function SubtaskItem({
         <p
           className={cn(
             'text-sm font-medium truncate',
-            subtask.completed
+            isCompleted
               ? 'text-gray-400 line-through'
               : 'text-gray-900',
           )}

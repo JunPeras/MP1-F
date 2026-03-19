@@ -30,14 +30,14 @@ export function useCreateSubtask(activityId: number) {
 }
 
 /**
- * Hook para alternar el estado completed de una subtarea.
+ * Hook para alternar el estado de una subtarea entre pending y completed.
  */
 export function useToggleSubtask(activityId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, completed }: { id: number; completed: boolean }) =>
-      updateSubtask(id, { completed }),
+    mutationFn: ({ id, status }: { id: number; status: 'pending' | 'completed' }) =>
+      updateSubtask(id, { status }),
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity', activityId] });

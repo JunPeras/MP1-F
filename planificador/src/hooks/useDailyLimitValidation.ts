@@ -7,7 +7,7 @@ export interface Subtask {
   name: string;
   target_date: string;
   estimated_hours: string | number;
-  completed: boolean;
+  status: 'pending' | 'completed' | 'postponed';
 }
 
 interface ConflictActivity {
@@ -37,7 +37,10 @@ export function useDailyLimitValidation(
 
     // 1. Filtrar subtareas del mismo día que NO estén completadas
     const daySubtasks = allSubtasks.filter(
-      (s) => s.target_date === targetDate && !s.completed && s.id !== currentSubtaskId
+      (s) =>
+        s.target_date === targetDate &&
+        s.status !== 'completed' &&
+        s.id !== currentSubtaskId
     );
 
     // 2. Calcular horas en la actividad actual

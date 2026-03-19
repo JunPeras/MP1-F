@@ -19,7 +19,24 @@ interface EditSubtaskModalProps {
   readonly onClose: () => void;
   readonly subtask: Subtask | null;
   readonly activityId: number;
+  readonly dueDate?: string;
   readonly allSubtasks: Subtask[];
+}
+
+function getDateInputMax(dateValue?: string): string | undefined {
+  if (!dateValue) return undefined;
+
+  const directMatch = dateValue.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directMatch) return directMatch[1];
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -31,6 +48,7 @@ export function EditSubtaskModal({
   onClose,
   subtask,
   activityId,
+  dueDate,
 }: EditSubtaskModalProps) {
   const updateMutation = useUpdateSubtask(activityId);
 
@@ -49,6 +67,7 @@ export function EditSubtaskModal({
 
   const currentFormDate = useWatch({ control, name: 'target_date' });
   const currentFormHours = useWatch({ control, name: 'estimated_hours' });
+  const maxSubtaskDate = getDateInputMax(dueDate);
 
   const { hasExceeded, totalHours, limit, conflictingActivities, hoursInCurrentActivity } = 
     useDailyLimitValidation(
@@ -142,6 +161,7 @@ export function EditSubtaskModal({
             <input
               id="edit-subtask-date"
               type="date"
+              max={maxSubtaskDate}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               {...register('target_date')}
             />

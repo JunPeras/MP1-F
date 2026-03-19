@@ -159,6 +159,7 @@ export default function DetailActivityPage() {
         <SubtaskSection
           activityId={activityId}
           subtasks={activity.subtasks ?? []}
+          dueDate={activity.due_date}
         />
 
         {/* ── Acciones ── */}
