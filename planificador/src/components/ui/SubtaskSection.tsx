@@ -15,7 +15,7 @@ import {
 
 import {
   useCreateSubtask,
-  useToggleSubtask,
+  useUpdateSubtaskStatus,
   useDeleteSubtask,
 } from '../../hooks/useSubtaskMutations';
 import {
@@ -52,11 +52,13 @@ function getDateInputMax(dateValue?: string): string | undefined {
 
 function sortSubtasks(subtasks: Subtask[]): Subtask[] {
   return [...subtasks].sort((a, b) => {
-    const aCompleted = a.status === 'completed';
-    const bCompleted = b.status === 'completed';
+    const statusOrder: Record<Subtask['status'], number> = {
+      pending: 0,
+      postponed: 1,
+      completed: 2,
+    };
 
-    if (aCompleted === bCompleted) return 0;
-    return aCompleted ? 1 : -1;
+    return statusOrder[a.status] - statusOrder[b.status];
   });
 }
 
@@ -70,7 +72,7 @@ export function SubtaskSection({ activityId, subtasks, dueDate }: SubtaskSection
   
   const { data: allUserSubtasks = [] } = useAllSubtasks();
   const createSubtaskMutation = useCreateSubtask(activityId);
-  const toggleSubtaskMutation = useToggleSubtask(activityId);
+  const updateStatusMutation = useUpdateSubtaskStatus(activityId);
   const deleteSubtaskMutation = useDeleteSubtask(activityId);
 
   const {
@@ -165,15 +167,22 @@ export function SubtaskSection({ activityId, subtasks, dueDate }: SubtaskSection
             <SubtaskItem
               key={subtask.id}
               subtask={subtask}
-              onToggle={() =>
-                toggleSubtaskMutation.mutate({
+              onComplete={() =>
+                updateStatusMutation.mutate({
                   id: subtask.id,
-                  status: subtask.status === 'completed' ? 'pending' : 'completed',
+                  status: 'completed',
+                })
+              }
+              onPostpone={(note) =>
+                updateStatusMutation.mutate({
+                  id: subtask.id,
+                  status: 'postponed',
+                  note,
                 })
               }
               onDelete={() => setSubtaskToDelete(subtask)}
               onEdit={() => setSubtaskToEdit(subtask)}
-              isToggling={toggleSubtaskMutation.isPending}
+              isUpdating={updateStatusMutation.isPending}
               isDeleting={
                 deleteSubtaskMutation.isPending &&
                 subtaskToDelete?.id === subtask.id
@@ -354,10 +363,11 @@ export function SubtaskSection({ activityId, subtasks, dueDate }: SubtaskSection
 
 interface SubtaskItemProps {
   readonly subtask: Subtask;
-  readonly onToggle: () => void;
+  readonly onComplete: () => void;
+  readonly onPostpone: (note?: string) => void;
   readonly onDelete: () => void;
   readonly onEdit: () => void;
-  readonly isToggling: boolean;
+  readonly isUpdating: boolean;
   readonly isDeleting: boolean;
 }
 
@@ -367,86 +377,148 @@ function cn(...classes: (string | boolean | undefined)[]) {
 
 function SubtaskItem({
   subtask,
-  onToggle,
+  onComplete,
+  onPostpone,
   onDelete,
   onEdit,
-  isToggling,
+  isUpdating,
   isDeleting,
 }: SubtaskItemProps) {
   const isCompleted = subtask.status === 'completed';
+  const isPostponed = subtask.status === 'postponed';
+  const [showPostponeInput, setShowPostponeInput] = useState(false);
+  const [postponeNote, setPostponeNote] = useState(subtask.note ?? '');
+
+  const handlePostponeConfirm = () => {
+    onPostpone(postponeNote.trim() || undefined);
+    setShowPostponeInput(false);
+  };
 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-md border bg-white px-4 py-3 transition-colors',
-        isCompleted
-          ? 'border-gray-100 bg-gray-50/80'
-          : 'border-gray-200',
+        'rounded-md border px-4 py-3 transition-colors',
+        isCompleted && 'border-gray-100 bg-gray-50/80',
+        isPostponed && 'border-orange-200 bg-orange-50/80',
+        !isCompleted && !isPostponed && 'border-gray-200 bg-white',
       )}
     >
-      {/* Toggle checkbox */}
-      <button
-        type="button"
-        onClick={onToggle}
-        disabled={isToggling}
-        className="shrink-0 text-gray-400 hover:text-green-600 transition-colors disabled:opacity-50"
-        title={
-          isCompleted
-            ? 'Marcar como pendiente'
-            : 'Marcar como completada'
-        }
-      >
-        {isCompleted ? (
-          <CheckCircle2 className="h-5 w-5 text-green-500" />
-        ) : (
-          <Circle className="h-5 w-5" />
-        )}
-      </button>
-
-      {/* Info */}
-      <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            'text-sm font-medium truncate',
-            isCompleted
-              ? 'text-gray-400 line-through'
-              : 'text-gray-900',
-          )}
+      <div className="flex items-center gap-3">
+        {/* Checkbox de "Hecha" */}
+        <button
+          type="button"
+          onClick={onComplete}
+          disabled={isUpdating || isCompleted}
+          className="shrink-0 text-gray-400 hover:text-green-600 transition-colors disabled:opacity-50"
+          title={isCompleted ? 'Ya marcada como hecha' : 'Marcar como hecha'}
         >
-          {subtask.name}
-        </p>
-        <div className="flex items-center gap-3 mt-0.5">
-          <span className="text-xs text-gray-400 flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            {subtask.target_date}
-          </span>
-          <span className="text-xs text-gray-400 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {subtask.estimated_hours}h
-          </span>
+          {isCompleted ? (
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+          ) : (
+            <Circle className="h-5 w-5" />
+          )}
+        </button>
+
+        {/* Info */}
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              'text-sm font-medium truncate',
+              isCompleted && 'text-gray-400 line-through',
+              isPostponed && 'text-orange-900',
+              !isCompleted && !isPostponed && 'text-gray-900',
+            )}
+          >
+            {subtask.name}
+          </p>
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {subtask.target_date}
+            </span>
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {subtask.estimated_hours}h
+            </span>
+            {isPostponed && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                <Clock className="h-3 w-3" />
+                Pospuesta
+              </span>
+            )}
+          </div>
+          {isPostponed && subtask.note && (
+            <p className="mt-1 text-xs text-orange-800/90">
+              Nota: {subtask.note}
+            </p>
+          )}
         </div>
+
+        {/* Posponer */}
+        <button
+          type="button"
+          onClick={() => setShowPostponeInput((prev) => !prev)}
+          disabled={isUpdating || isCompleted}
+          className="shrink-0 rounded p-1 text-gray-300 hover:text-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-50"
+          title="Posponer subtarea"
+        >
+          <Clock className="h-4 w-4" />
+        </button>
+
+        {/* Editar */}
+        <button
+          type="button"
+          onClick={onEdit}
+          className="shrink-0 rounded p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+          title="Editar subtarea"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+
+        {/* Eliminar */}
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={isDeleting}
+          className="shrink-0 rounded p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+          title="Eliminar subtarea"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
 
-      {/* Editar */}
-      <button
-        type="button"
-        onClick={onEdit}
-        className="shrink-0 rounded p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-        title="Editar subtarea"
-      >
-        <Pencil className="h-4 w-4" />
-      </button>
-
-      {/* Eliminar */}
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={isDeleting}
-        className="shrink-0 rounded p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-        title="Eliminar subtarea"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
+      {showPostponeInput && !isCompleted && (
+        <div className="mt-3 rounded-md border border-orange-200 bg-white p-3">
+          <label htmlFor={`postpone-note-${subtask.id}`} className="block text-xs font-medium text-gray-700 mb-1">
+            Nota opcional de posposición
+          </label>
+          <input
+            id={`postpone-note-${subtask.id}`}
+            type="text"
+            value={postponeNote}
+            onChange={(event) => setPostponeNote(event.target.value)}
+            placeholder="Ej: Falta información del profesor"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 focus:outline-none"
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPostponeInput(false)}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handlePostponeConfirm}
+              disabled={isUpdating}
+              className="rounded-md bg-orange-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+            >
+              Confirmar posponer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
