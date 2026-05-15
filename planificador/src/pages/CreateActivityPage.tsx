@@ -43,6 +43,7 @@ export default function CrearActividadPage() {
   const limit = user?.daily_hour_limit ?? 6;
 
   const watchedSubtasks = useWatch({ control, name: 'subtasks' }) || [];
+  const watchedDueDate = useWatch({ control, name: 'due_date' });//* ->> ^_^ <<- 
 
   const datesInForm = [...new Set(watchedSubtasks.map((st: any) => st.target_date).filter(Boolean))];
 
@@ -54,7 +55,7 @@ export default function CrearActividadPage() {
         .reduce((sum, st) => sum + (Number(st.estimated_hours) || 0), 0);
 
       const daySubtasksFromDB = allExistingSubtasks.filter(
-        (s: any) => s.target_date === date && !s.completed
+        (s: any) => s.target_date === date && s.status !== 'completed'
       );
 
       const hoursInDB = daySubtasksFromDB.reduce(
@@ -276,7 +277,7 @@ export default function CrearActividadPage() {
           </section>
 
           {/* ── Sección 3: Plan de Trabajo (Subtareas) ── */}
-          <SubtaskFormList control={control} errors={errors} />
+          <SubtaskFormList control={control} errors={errors} dueDate={watchedDueDate}/>
 
           {hasExceeded && (
             <div className="mt-4 rounded-md bg-red-50 p-4 border border-red-200 animate-in slide-in-from-top-2 duration-300">

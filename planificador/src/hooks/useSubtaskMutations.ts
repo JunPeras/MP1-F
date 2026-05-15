@@ -30,17 +30,33 @@ export function useCreateSubtask(activityId: number) {
 }
 
 /**
- * Hook para alternar el estado completed de una subtarea.
+ * Hook para actualizar el estado de una subtarea (completed, postponed o pending)
+ * y enviar una nota opcional cuando corresponda.
  */
-export function useToggleSubtask(activityId: number) {
+export function useUpdateSubtaskStatus(activityId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, completed }: { id: number; completed: boolean }) =>
-      updateSubtask(id, { completed }),
+    mutationFn: ({
+      id,
+      status,
+      note,
+    }: {
+      id: number;
+      status: 'pending' | 'completed' | 'postponed';
+      note?: string;
+    }) => updateSubtask(id, { status, note }),
 
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['activity', activityId] });
+
+      if (variables.status === 'completed') {
+        toast.success('Subtarea marcada como hecha');
+      }
+
+      if (variables.status === 'postponed') {
+        toast.success('Subtarea pospuesta correctamente');
+      }
     },
 
     onError: () => {

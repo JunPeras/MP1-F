@@ -5,6 +5,23 @@ import type { CreateActivityForm } from '../../schemas/activity.schema';
 interface SubtaskFormListProps {
   readonly control: Control<CreateActivityForm>;
   readonly errors: FieldErrors<CreateActivityForm>;
+  readonly dueDate?: string;
+}
+
+function getDateInputMax(dateValue?: string): string | undefined {
+  if (!dateValue) return undefined;
+
+  const directMatch = dateValue.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directMatch) return directMatch[1];
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -13,7 +30,7 @@ interface SubtaskFormListProps {
  *
  * Usa `useFieldArray` con el campo `subtasks` del form padre.
  */
-export function SubtaskFormList({ control, errors }: SubtaskFormListProps) {
+export function SubtaskFormList({ control, errors, dueDate }: SubtaskFormListProps) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'subtasks',
@@ -22,6 +39,8 @@ export function SubtaskFormList({ control, errors }: SubtaskFormListProps) {
   const handleAdd = () => {
     append({ name: '', target_date: '', estimated_hours: 0 });
   };
+
+  const maxSubtaskDate = getDateInputMax(dueDate);
 
   return (
     <section className="space-y-4">
@@ -101,7 +120,8 @@ export function SubtaskFormList({ control, errors }: SubtaskFormListProps) {
                   </label>
                   <input
                     id={`subtask-date-${index}`}
-                    type="date"
+                    type="date" 
+                     max={maxSubtaskDate} 
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     {...control.register(`subtasks.${index}.target_date`)}
                   />

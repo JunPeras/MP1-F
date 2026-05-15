@@ -29,7 +29,9 @@ export async function getSubtasksByActivity(
  */
 export async function updateSubtask(
   id: number,
-  data: Partial<Pick<Subtask, 'name' | 'target_date' | 'estimated_hours' | 'completed'>>,
+  data: Partial<
+    Pick<Subtask, 'name' | 'target_date' | 'estimated_hours' | 'status' | 'note'>
+  >,
 ): Promise<Subtask> {
   const response = await api.patch<Subtask>(`/subtasks/${id}/`, data);
   return response.data;

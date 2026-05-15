@@ -35,5 +35,6 @@ export interface Subtask {
   target_date: string;
   estimated_hours: number;
   created_at: string;
-  completed: boolean;
+  status: 'pending' | 'completed' | 'postponed';
+  note?: string;
 }
