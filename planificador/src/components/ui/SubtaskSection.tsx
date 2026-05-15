@@ -384,8 +384,8 @@ function SubtaskItem({
   isUpdating,
   isDeleting,
 }: SubtaskItemProps) {
-  const isCompleted = subtask.status === 'completed';
-  const isPostponed = subtask.status === 'postponed';
+  const isCompleted = subtask.status?.toLowerCase() === 'completed';
+  const isPostponed = subtask.status?.toLowerCase() === 'postponed';
   const [showPostponeInput, setShowPostponeInput] = useState(false);
   const [postponeNote, setPostponeNote] = useState(subtask.note ?? '');
 
@@ -458,9 +458,10 @@ function SubtaskItem({
         <button
           type="button"
           onClick={() => setShowPostponeInput((prev) => !prev)}
+          hidden={isCompleted}
           disabled={isUpdating || isCompleted}
           className="shrink-0 rounded p-1 text-gray-300 hover:text-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-50"
-          title="Posponer subtarea"
+          title={isCompleted ? 'No se puede posponer una tarea completada' : 'Posponer subtarea'}
         >
           <Clock className="h-4 w-4" />
         </button>
@@ -469,8 +470,10 @@ function SubtaskItem({
         <button
           type="button"
           onClick={onEdit}
-          className="shrink-0 rounded p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-          title="Editar subtarea"
+          hidden={isCompleted}
+          disabled={isCompleted} // 2. Bloqueo agregado
+          className="shrink-0 rounded p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50" // Agregada la clase disabled:opacity-50
+          title={isCompleted ? 'No se puede editar una tarea completada' : 'Editar subtarea'}
         >
           <Pencil className="h-4 w-4" />
         </button>
@@ -479,9 +482,10 @@ function SubtaskItem({
         <button
           type="button"
           onClick={onDelete}
-          disabled={isDeleting}
+          hidden={isCompleted}
+          disabled={isDeleting || isCompleted} // 3. Bloqueo agregado (|| isCompleted)
           className="shrink-0 rounded p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-          title="Eliminar subtarea"
+          title={isCompleted ? 'No se puede eliminar una tarea completada' : 'Eliminar subtarea'}
         >
           <Trash2 className="h-4 w-4" />
         </button>
