@@ -86,7 +86,7 @@ export type Activity = Omit<CreateActivityForm, 'subtasks'> & {
     event_date?: string;
     status: 'pending' | 'completed';
     subtasks: Subtask[];
-    progress_percentage: number;
+    progress_percent: number;
     completed_subtasks: number;
     total_subtasks: number;
 };
