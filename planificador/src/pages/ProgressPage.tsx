@@ -119,7 +119,7 @@ export default function ProgressPage() {
 
             <div>
               <div className="mb-1.5 flex items-center justify-between text-xs text-gray-500">
-                <span>{activity.progress_percentage}%</span>
+                <span>{activity.progress_percent}%</span>
                 <span>
                   {activity.completed_subtasks}/{activity.total_subtasks} completadas
                 </span>
@@ -127,7 +127,7 @@ export default function ProgressPage() {
               <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                 <div
                   className="h-full rounded-full bg-green-500 transition-all duration-500"
-                  style={{ width: `${activity.progress_percentage}%` }}
+                  style={{ width: `${activity.progress_percent}%` }}
                 />
               </div>
             </div>
