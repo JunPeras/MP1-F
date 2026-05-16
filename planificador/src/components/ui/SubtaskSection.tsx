@@ -180,6 +180,13 @@ export function SubtaskSection({ activityId, subtasks, dueDate }: SubtaskSection
                   note,
                 })
               }
+              onPending={(note) =>
+                updateStatusMutation.mutate({
+                  id: subtask.id,
+                  status: 'pending',
+                  note,
+                })
+              }
               onDelete={() => setSubtaskToDelete(subtask)}
               onEdit={() => setSubtaskToEdit(subtask)}
               isUpdating={updateStatusMutation.isPending}
@@ -365,6 +372,7 @@ interface SubtaskItemProps {
   readonly subtask: Subtask;
   readonly onComplete: () => void;
   readonly onPostpone: (note?: string) => void;
+  readonly onPending: (note?: string) => void;  
   readonly onDelete: () => void;
   readonly onEdit: () => void;
   readonly isUpdating: boolean;
@@ -379,6 +387,7 @@ function SubtaskItem({
   subtask,
   onComplete,
   onPostpone,
+  onPending,
   onDelete,
   onEdit,
   isUpdating,
@@ -386,11 +395,17 @@ function SubtaskItem({
 }: SubtaskItemProps) {
   const isCompleted = subtask.status?.toLowerCase() === 'completed';
   const isPostponed = subtask.status?.toLowerCase() === 'postponed';
+  const isPending = subtask.status?.toLowerCase() === 'pending';
   const [showPostponeInput, setShowPostponeInput] = useState(false);
   const [postponeNote, setPostponeNote] = useState(subtask.note ?? '');
 
   const handlePostponeConfirm = () => {
     onPostpone(postponeNote.trim() || undefined);
+    setShowPostponeInput(false);
+  };
+
+  const handlePendingConfirm = () => {
+    onPending('');
     setShowPostponeInput(false);
   };
 
@@ -494,15 +509,16 @@ function SubtaskItem({
       {showPostponeInput && !isCompleted && (
         <div className="mt-3 rounded-md border border-orange-200 bg-white p-3">
           <label htmlFor={`postpone-note-${subtask.id}`} className="block text-xs font-medium text-gray-700 mb-1">
-            Nota opcional de posposición
+            {isPostponed ? 'Nota de posposición actual' : 'Nota opcional de posposición'}
           </label>
           <input
             id={`postpone-note-${subtask.id}`}
             type="text"
             value={postponeNote}
+            disabled={isPostponed} // Deshabilitar el input si ya está pospuesta y solo se va a remover
             onChange={(event) => setPostponeNote(event.target.value)}
             placeholder="Ej: Falta información del profesor"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
           />
           <div className="mt-2 flex justify-end gap-2">
             <button
@@ -512,14 +528,30 @@ function SubtaskItem({
             >
               Cancelar
             </button>
-            <button
-              type="button"
-              onClick={handlePostponeConfirm}
-              disabled={isUpdating}
-              className="rounded-md bg-orange-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-600 disabled:opacity-50"
-            >
-              Confirmar posponer
-            </button>
+
+            {/* Si es PENDING: Muestra botón para confirmar posposición */}
+            {isPending && (
+              <button
+                type="button"
+                onClick={handlePostponeConfirm}
+                disabled={isUpdating}
+                className="rounded-md bg-orange-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+              >
+                Confirmar posponer
+              </button>
+            )}
+
+            {/* Si es POSTPONED: Muestra botón para remover la posposición y volver a pendiente */}
+            {isPostponed && (
+              <button
+                type="button"
+                onClick={handlePendingConfirm}
+                disabled={isUpdating}
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                Remover posposición
+              </button>
+            )}
           </div>
         </div>
       )}
